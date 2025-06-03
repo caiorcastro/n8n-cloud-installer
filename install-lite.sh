@@ -60,7 +60,7 @@ sudo npm install -g n8n@latest \
     --no-optional \
     --production \
     --maxsockets=1 \
-    --max_old_space_size=512
+    --max_old_space_size=700
 
 # Verificar instalação
 if ! command -v pm2 &> /dev/null; then
@@ -89,7 +89,7 @@ EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
 EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
 EXECUTIONS_DATA_PRUNE=false
 # Otimizações para VM pequena
-NODE_OPTIONS=--max_old_space_size=512
+NODE_OPTIONS=--max_old_space_size=700
 N8N_DIAGNOSTICS_ENABLED=false
 N8N_VERSION_NOTIFICATIONS_ENABLED=false
 EOF
@@ -107,13 +107,13 @@ module.exports = {
     instances: 1,
     autorestart: true,
     watch: false,
-    max_memory_restart: '800M',
+    max_memory_restart: '850M',
     restart_delay: 10000,
     error_file: '/var/log/n8n/error.log',
     out_file: '/var/log/n8n/out.log',
     log_file: '/var/log/n8n/combined.log',
     time: true,
-    node_args: ['--max_old_space_size=512']
+    node_args: ['--max_old_space_size=700']
   }]
 };
 EOF
@@ -148,8 +148,8 @@ echo "🎉 N8N OTIMIZADO INSTALADO!"
 echo "🌐 Acesse: http://$EXTERNAL_IP:5678"
 echo ""
 echo "✅ OTIMIZAÇÕES APLICADAS:"
-echo "   💾 Uso máximo de memória: 512MB"
-echo "   🔄 Restart automático em 800MB"
+echo "   💾 Uso máximo de memória: 700MB"
+echo "   🔄 Restart automático em 850MB"
 echo "   📊 Logs reduzidos (warn apenas)"
 echo "   🚀 Configuração para VM pequena"
 echo ""

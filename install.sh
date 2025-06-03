@@ -111,7 +111,7 @@ module.exports = {
     instances: 1,
     autorestart: true,
     watch: false,
-    max_memory_restart: '900M',
+    max_memory_restart: '850M',
     restart_delay: 5000,
     error_file: '/var/log/n8n/error.log',
     out_file: '/var/log/n8n/out.log',
