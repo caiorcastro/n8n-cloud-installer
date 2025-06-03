@@ -18,10 +18,65 @@ echo "✅ Limpeza concluída!"
 # Instalação completa
 echo "🚀 INSTALANDO N8N..."
 sudo apt update -y
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - 2>/dev/null || true
-sudo apt-get install -y nodejs
-sudo npm install -g pm2@latest n8n@latest
-sudo useradd -m -s /bin/bash n8n
+
+# Instalar Node.js e npm
+echo "📦 Instalando Node.js e npm..."
+if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+    # Primeiro tentar via apt
+    sudo apt-get install -y nodejs npm curl
+    
+    # Se npm não estiver disponível, instalar via NodeSource
+    if ! command -v npm &> /dev/null; then
+        echo "🔄 Instalando Node.js via NodeSource..."
+        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    fi
+    
+    # Verificar novamente
+    if ! command -v npm &> /dev/null; then
+        echo "❌ Erro: npm não foi instalado. Tentando instalação manual..."
+        curl -L https://www.npmjs.com/install.sh | sudo sh
+    fi
+fi
+
+# Verificar se npm está funcionando
+if ! command -v npm &> /dev/null; then
+    echo "❌ ERRO: npm não pôde ser instalado. Abortando..."
+    exit 1
+fi
+
+echo "✅ Versões instaladas:"
+node --version
+npm --version
+
+# Instalar PM2 e N8N
+echo "⚡ Instalando PM2 e N8N..."
+sudo npm install -g pm2@latest || {
+    echo "❌ Erro ao instalar PM2. Tentando com --unsafe-perm..."
+    sudo npm install -g pm2@latest --unsafe-perm
+}
+
+sudo npm install -g n8n@latest || {
+    echo "❌ Erro ao instalar N8N. Tentando com --unsafe-perm..."
+    sudo npm install -g n8n@latest --unsafe-perm
+}
+
+# Verificar se foram instalados
+if ! command -v pm2 &> /dev/null; then
+    echo "❌ ERRO: PM2 não foi instalado corretamente"
+    exit 1
+fi
+
+if ! command -v n8n &> /dev/null; then
+    echo "❌ ERRO: N8N não foi instalado corretamente"
+    exit 1
+fi
+
+echo "✅ PM2 e N8N instalados com sucesso!"
+
+# Criar usuário dedicado para N8N
+echo "👤 Criando usuário n8n..."
+sudo useradd -m -s /bin/bash n8n || true
 sudo mkdir -p /home/n8n/.n8n /var/log/n8n /opt/n8n-data
 
 # Configuração persistente
@@ -67,16 +122,23 @@ EOF
 echo "🔐 CONFIGURANDO PERMISSÕES E INICIANDO..."
 sudo chown -R n8n:n8n /home/n8n /var/log/n8n /opt/n8n-data
 sudo ufw allow 5678 2>/dev/null || true
-sudo su - n8n -c "cd /home/n8n && pm2 start ecosystem.config.js && pm2 save"
-sudo su - n8n -c "pm2 startup" 2>/dev/null || true
+
+# Iniciar N8N com PM2
+echo "🚀 Iniciando N8N..."
+sudo su - n8n -c "cd /home/n8n && pm2 start ecosystem.config.js"
+sleep 3
+sudo su - n8n -c "pm2 save"
 
 # Configurar startup automático
+echo "🔄 Configurando startup automático..."
+sudo su - n8n -c "pm2 startup" 2>/dev/null || true
 STARTUP_CMD=$(sudo su - n8n -c "pm2 startup 2>/dev/null" | grep "sudo env" | head -1)
 if [ ! -z "$STARTUP_CMD" ]; then
     eval $STARTUP_CMD 2>/dev/null || true
 fi
 
-# Resultado final
+# Verificar status
+echo "🔍 Verificando status..."
 sleep 5
 EXTERNAL_IP=$(curl -s ifconfig.me)
 sudo su - n8n -c "pm2 status"
@@ -89,4 +151,7 @@ echo ""
 echo "📋 Comandos úteis:"
 echo "   Status: sudo su - n8n -c 'pm2 status'"
 echo "   Logs: sudo su - n8n -c 'pm2 logs n8n'"
-echo "   Reiniciar: sudo su - n8n -c 'pm2 restart n8n'" 
+echo "   Reiniciar: sudo su - n8n -c 'pm2 restart n8n'"
+echo ""
+echo "🔍 Para verificar se tudo está funcionando:"
+echo "   curl -fsSL https://raw.githubusercontent.com/caiorcastro/n8n-cloud-installer/main/verify.sh | bash" 
