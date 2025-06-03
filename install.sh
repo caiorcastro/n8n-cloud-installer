@@ -19,23 +19,19 @@ echo "✅ Limpeza concluída!"
 echo "🚀 INSTALANDO N8N..."
 sudo apt update -y
 
-# Instalar Node.js e npm
-echo "📦 Instalando Node.js e npm..."
+# Instalar Node.js 20 (requerido pelo N8N mais recente)
+echo "📦 Instalando Node.js 20..."
 if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
-    # Primeiro tentar via apt
-    sudo apt-get install -y nodejs npm curl
-    
-    # Se npm não estiver disponível, instalar via NodeSource
-    if ! command -v npm &> /dev/null; then
-        echo "🔄 Instalando Node.js via NodeSource..."
-        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    # Instalar Node.js 20 via NodeSource
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+else
+    # Verificar se a versão é compatível
+    NODE_VERSION=$(node --version | cut -d'.' -f1 | sed 's/v//')
+    if [ "$NODE_VERSION" -lt 20 ]; then
+        echo "🔄 Atualizando Node.js para versão 20..."
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
         sudo apt-get install -y nodejs
-    fi
-    
-    # Verificar novamente
-    if ! command -v npm &> /dev/null; then
-        echo "❌ Erro: npm não foi instalado. Tentando instalação manual..."
-        curl -L https://www.npmjs.com/install.sh | sudo sh
     fi
 fi
 
@@ -45,20 +41,27 @@ if ! command -v npm &> /dev/null; then
     exit 1
 fi
 
+# Verificar versão do Node.js
+NODE_VERSION=$(node --version | cut -d'.' -f1 | sed 's/v//')
+if [ "$NODE_VERSION" -lt 20 ]; then
+    echo "❌ ERRO: N8N requer Node.js 20+. Versão atual: $(node --version)"
+    exit 1
+fi
+
 echo "✅ Versões instaladas:"
 node --version
 npm --version
 
 # Instalar PM2 e N8N
 echo "⚡ Instalando PM2 e N8N..."
-sudo npm install -g pm2@latest || {
+sudo npm install -g pm2@latest --unsafe-perm || {
     echo "❌ Erro ao instalar PM2. Tentando com --unsafe-perm..."
-    sudo npm install -g pm2@latest --unsafe-perm
+    sudo npm install -g pm2@latest --unsafe-perm --force
 }
 
-sudo npm install -g n8n@latest || {
+sudo npm install -g n8n@latest --unsafe-perm || {
     echo "❌ Erro ao instalar N8N. Tentando com --unsafe-perm..."
-    sudo npm install -g n8n@latest --unsafe-perm
+    sudo npm install -g n8n@latest --unsafe-perm --force
 }
 
 # Verificar se foram instalados
@@ -124,7 +127,7 @@ sudo chown -R n8n:n8n /home/n8n /var/log/n8n /opt/n8n-data
 sudo ufw allow 5678 2>/dev/null || true
 
 # Iniciar N8N com PM2
-echo "🚀 Iniciando N8N..."
+echo "🚀 Iniciando N8N em BACKGROUND..."
 sudo su - n8n -c "cd /home/n8n && pm2 start ecosystem.config.js"
 sleep 3
 sudo su - n8n -c "pm2 save"
@@ -148,10 +151,18 @@ echo "🎉 INSTALAÇÃO CONCLUÍDA COM SUCESSO!"
 echo "🌐 ACESSE: http://$EXTERNAL_IP:5678"
 echo "🔐 Crie seu usuário e senha - serão salvos PERMANENTEMENTE!"
 echo ""
+echo "✅ CARACTERÍSTICAS:"
+echo "   🔥 Roda em BACKGROUND - pode desligar SSH"
+echo "   🔄 Auto-restart se falhar"
+echo "   🚀 Inicia automaticamente no boot da VM"
+echo "   💾 Dados salvos permanentemente"
+echo ""
 echo "📋 Comandos úteis:"
 echo "   Status: sudo su - n8n -c 'pm2 status'"
 echo "   Logs: sudo su - n8n -c 'pm2 logs n8n'"
 echo "   Reiniciar: sudo su - n8n -c 'pm2 restart n8n'"
 echo ""
 echo "🔍 Para verificar se tudo está funcionando:"
-echo "   curl -fsSL https://raw.githubusercontent.com/caiorcastro/n8n-cloud-installer/main/verify.sh | bash" 
+echo "   curl -fsSL https://raw.githubusercontent.com/caiorcastro/n8n-cloud-installer/main/verify.sh | bash"
+echo ""
+echo "🎯 Agora pode desconectar o SSH - N8N continuará rodando!" 
